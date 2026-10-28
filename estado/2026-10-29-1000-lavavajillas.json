@@ -1,0 +1,12 @@
+{
+ "nombre": "2026-10-29-1000-lavavajillas",
+ "procesado": "2026-10-28T09:02:24+00:00",
+ "ok": true,
+ "buffer": {
+  "id": "6ae1ba2392a79b7aa16e9cd5",
+  "status": "scheduled",
+  "dueAt": "2026-10-29T09:00:00.000Z"
+ },
+ "url": "https://raw.githubusercontent.com/Fmochy/Sale-a-cuenta-media/main/videos/2026-10-29-1000-lavavajillas.mp4",
+ "tema": "[TikTok #3] Lavavajillas vs fregar a mano"
+}
