@@ -1,0 +1,12 @@
+{
+ "nombre": "2026-10-29-1000-bombillas-led",
+ "procesado": "2026-10-28T20:32:10+00:00",
+ "ok": true,
+ "buffer": {
+  "id": "6ae25bcd44c308f29b54ae89",
+  "status": "scheduled",
+  "dueAt": "2026-10-29T09:00:00.000Z"
+ },
+ "url": "https://raw.githubusercontent.com/Fmochy/Sale-a-cuenta-media/main/videos/2026-10-29-1000-bombillas-led.mp4",
+ "tema": "[TikTok #4] Bombillas LED vs halógenas"
+}
