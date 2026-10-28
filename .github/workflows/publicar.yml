@@ -1,0 +1,102 @@
+name: Publicar TikTok
+on:
+  schedule:
+    - cron: "*/20 * * * *"
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency: publicar
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Programar en Buffer los vídeos nuevos de la cola de Dropbox
+        env:
+          BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}
+          COLA_URL: "https://www.dropbox.com/scl/fo/swlj97kenlkhovvf6qnmv/ABe-JJl57-kI7TZDEf_rhKs?rlkey=5uze6r9ttvc7wj8v3pp30jf4u&dl=1"
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          cat > /tmp/publicar.py <<'PYEOF'
+          """Publicador TikTok de @sale.a.cuenta (se ejecuta en GitHub Actions, cada 20 min).
+          Descarga la carpeta compartida de Dropbox "cola" (subcarpetas <nombre>/ con video.mp4 + post.json), copia cada vídeo
+          nuevo a este repo (videos/<nombre>.mp4, enlace raw público), lo programa en Buffer y deja el resultado en estado/<nombre>.json."""
+          import os, io, json, time, zipfile, datetime, subprocess, urllib.request, urllib.parse, urllib.error
+
+          REPO = os.environ.get("GITHUB_REPOSITORY", "Fmochy/Sale-a-cuenta-media")
+          CHANNEL = os.environ.get("BUFFER_CHANNEL_ID", "6ae1a7712f1f5ed648f8c437")
+          COLA = os.environ["COLA_URL"]                      # enlace compartido de la carpeta cola de Dropbox
+
+
+          def http(url, data=None, headers=None):
+              req = urllib.request.Request(url, data=data, headers=headers or {})
+              try:
+                  with urllib.request.urlopen(req, timeout=300) as r:
+                      return r.read()
+              except urllib.error.HTTPError as e:
+                  raise RuntimeError(f"{url[:80]} -> {e.code}: {e.read()[:300]!r}")
+
+
+          def git(*a):
+              subprocess.run(["git", *a], check=True)
+
+
+          u = urllib.parse.urlsplit(COLA); q = dict(urllib.parse.parse_qsl(u.query)); q["dl"] = "1"
+          raw = http(urllib.parse.urlunsplit(u._replace(query=urllib.parse.urlencode(q))))
+          items = {}
+          with zipfile.ZipFile(io.BytesIO(raw)) as z:
+              for n in z.namelist():
+                  parts = [p for p in n.split("/") if p]
+                  if len(parts) >= 2 and parts[-1] in ("video.mp4", "post.json"):
+                      items.setdefault(parts[-2], {})[parts[-1]] = z.read(n)
+          os.makedirs("estado", exist_ok=True); os.makedirs("videos", exist_ok=True)
+          nuevos = sorted(n for n, f in items.items() if len(f) == 2 and not os.path.exists(f"estado/{n}.json"))
+          print("En cola:", sorted(items), "| nuevos:", nuevos)
+
+          for name in nuevos:
+              st = {"nombre": name, "procesado": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds")}
+              try:
+                  post = json.loads(items[name]["post.json"])
+                  open(f"videos/{name}.mp4", "wb").write(items[name]["video.mp4"])
+                  git("add", f"videos/{name}.mp4"); git("commit", "-q", "-m", f"vídeo {name}")
+                  for i in range(4):
+                      if subprocess.run(["git", "push", "-q"]).returncode == 0: break
+                      git("pull", "-q", "--rebase"); time.sleep(5)
+                  url = f"https://raw.githubusercontent.com/{REPO}/main/videos/{urllib.parse.quote(name)}.mp4"
+                  for i in range(30):                                   # espera a que el enlace raw responda
+                      try:
+                          http(url, headers={"Range": "bytes=0-0"}); break
+                      except RuntimeError:
+                          time.sleep(5)
+                  due = post.get("dueAt")
+                  now = datetime.datetime.now(datetime.timezone.utc)
+                  late = not due or datetime.datetime.fromisoformat(due.replace("Z", "+00:00")) <= now + datetime.timedelta(minutes=2)
+                  inp = {"channelId": CHANNEL, "text": post["text"], "schedulingType": "automatic", "needsApproval": False,
+                         "mode": "shareNow" if late else "customScheduled", "assets": [{"video": {"url": url}}],
+                         "metadata": {"tiktok": {"isAiGenerated": bool(post.get("ai", True))}}}
+                  if not late: inp["dueAt"] = due
+                  qy = """mutation($input: CreatePostInput!){ createPost(input:$input){ __typename
+                          ... on PostActionSuccess { post { id status dueAt } } ... on MutationError { message } } }"""
+                  r = json.loads(http("https://api.buffer.com", json.dumps({"query": qy, "variables": {"input": inp}}).encode(),
+                                      {"Authorization": "Bearer " + os.environ["BUFFER_API_KEY"], "Content-Type": "application/json"}))
+                  if r.get("errors"): raise RuntimeError(json.dumps(r["errors"])[:400])
+                  res = r["data"]["createPost"]
+                  if res["__typename"] != "PostActionSuccess": raise RuntimeError(res.get("message") or res["__typename"])
+                  st.update(ok=True, buffer=res["post"], url=url, tema=post.get("tema", ""))
+                  print(name, "programado:", res["post"])
+              except Exception as e:
+                  st.update(ok=False, error=str(e)[:1000]); print(name, "ERROR:", e)
+              open(f"estado/{name}.json", "w").write(json.dumps(st, ensure_ascii=False, indent=1))
+              git("add", f"estado/{name}.json"); git("commit", "-q", "-m", f"estado {name}")
+              for i in range(4):
+                  if subprocess.run(["git", "push", "-q"]).returncode == 0: break
+                  git("pull", "-q", "--rebase"); time.sleep(5)
+
+          # limpieza: borra del repo los vídeos de hace más de 14 días (el nombre empieza por AAAA-MM-DD)
+          lim = (datetime.date.today() - datetime.timedelta(days=14)).isoformat()
+          old = [f for f in os.listdir("videos") if f[:10] < lim]
+          if old:
+              git("rm", "-q", *[f"videos/{f}" for f in old]); git("commit", "-q", "-m", "limpieza de vídeos antiguos"); git("push", "-q")
+          PYEOF
+          python3 /tmp/publicar.py
