@@ -1,0 +1,12 @@
+{
+ "nombre": "2026-10-29-1800-agua-embotellada",
+ "procesado": "2026-10-28T20:32:16+00:00",
+ "ok": true,
+ "buffer": {
+  "id": "6ae25bd4bcf6087bd6eaff1c",
+  "status": "scheduled",
+  "dueAt": "2026-10-29T17:00:00.000Z"
+ },
+ "url": "https://raw.githubusercontent.com/Fmochy/Sale-a-cuenta-media/main/videos/2026-10-29-1800-agua-embotellada.mp4",
+ "tema": "[TikTok #5] Agua embotellada vs grifo"
+}
