@@ -1,0 +1,12 @@
+{
+ "nombre": "2026-10-30-1800-regleta",
+ "procesado": "2026-10-29T23:33:32+00:00",
+ "ok": true,
+ "buffer": {
+  "id": "6ae3d7d0a83a7fb63c82f449",
+  "status": "scheduled",
+  "dueAt": "2026-10-30T17:00:00.000Z"
+ },
+ "url": "https://raw.githubusercontent.com/Fmochy/Sale-a-cuenta-media/main/videos/2026-10-30-1800-regleta.mp4",
+ "tema": "[TikTok #7] ¿Sale a cuenta comprarlo? Regleta con interruptor: consumo en espera 70 €/año"
+}
