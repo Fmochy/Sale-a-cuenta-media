@@ -1,0 +1,12 @@
+{
+ "nombre": "2026-10-30-1000-secadora",
+ "procesado": "2026-10-29T23:33:28+00:00",
+ "ok": true,
+ "buffer": {
+  "id": "6ae3d7cb6385db216a141a5f",
+  "status": "scheduled",
+  "dueAt": "2026-10-30T09:00:00.000Z"
+ },
+ "url": "https://raw.githubusercontent.com/Fmochy/Sale-a-cuenta-media/main/videos/2026-10-30-1000-secadora.mp4",
+ "tema": "[TikTok #6] ¿Sale a cuenta comprarlo? Secadora: resistencia vs bomba de calor vs tender (125 € vs 47 €/año)"
+}
